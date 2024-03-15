@@ -1,0 +1,51 @@
+name: tigervnc
+adopt-info: tigervnc
+grade: stable
+confinement: strict
+base: core22
+architectures:
+  - build-on: amd64
+
+apps:
+  tigervnc:
+    command: usr/bin/xtigervncviewer
+    common-id: org.tigervnc.vncviewer.desktop
+    desktop: usr/share/applications/xtigervncviewer.desktop
+    extensions: [gnome]
+    plugs:
+      - audio-record
+      - audio-playback
+      - home
+      - network
+      - mount-observe
+      - removable-media
+
+parts:
+  tigervnc:
+    plugin: nil
+    parse-info: [usr/share/metainfo/org.tigervnc.vncviewer.metainfo.xml]
+    organize:
+       snap/tigervnc/current/usr: usr
+    stage-packages:
+      - tigervnc-viewer
+    override-stage: |
+      craftctl default
+      VERSION=$(dpkg-parsechangelog -S Version -l $CRAFT_STAGE/usr/share/doc/tigervnc-viewer/changelog.Debian.gz |awk -F '+' '{print $1}')
+      craftctl set version=$VERSION
+    prime:
+      - -usr/share/doc
+      - -usr/share/lintian
+      - -usr/share/man
+      - -usr/share/xml
+  
+  # Find files provided by the base and platform snap and ensure they aren't
+  # duplicated in this snap
+  cleanup:
+    after: [tigervnc]
+    plugin: nil
+    build-snaps: [core22, gnome-42-2204]
+    override-prime: |
+      set -eux
+      for snap in "core22" "gnome-42-2204"; do
+        cd "/snap/$snap/current" && find . -type f,l -name *.so.* -exec rm -f "$CRAFT_PRIME/{}" \;
+      done
